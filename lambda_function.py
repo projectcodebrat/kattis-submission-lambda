@@ -17,6 +17,7 @@ def lambda_handler(event, context):
     
     # ============== LOGIN ================================================================
     object_key = "{}/kattisrc_json.txt".format(username)
+    
     # check if the user has kattis login-info stored in S3
     try:
         S3_CLIENT.head_object(Bucket=_S3_BUCKET_NAME, Key=object_key);
