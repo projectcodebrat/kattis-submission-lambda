@@ -70,7 +70,8 @@ def lambda_handler(event, context):
     print(result_reply.status_code)
 
 def submit(kattis_username, problem_id, cookies, language, files, mainclass='', tag=''):
-    """Make a submission.
+    """
+    Make a submission.
 
     The url_opener argument is an OpenerDirector object to use (as
     returned by the login() function)
