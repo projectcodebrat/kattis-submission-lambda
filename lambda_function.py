@@ -70,7 +70,7 @@ def lambda_handler(event, context):
     print(result_reply.status_code)
 
     # get link to submission on kattis
-    submit_response = result.content.decode('utf-8').replace('<br />', '\n')
+    submit_response = result_reply.content.decode('utf-8').replace('<br />', '\n')
     m = re.search(r'Submission ID: (\d+)', submit_response)
     if m:
         submission_id = m.group(1)
