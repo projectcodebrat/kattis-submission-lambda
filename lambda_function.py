@@ -2,6 +2,7 @@ import json
 import boto3
 from botocore.errorfactory import ClientError
 import requests
+import re
 
 _LOGIN_URL = 'https://open.kattis.com/login'
 _SUBMIT_URL = 'https://open.kattis.com/submit'
@@ -23,7 +24,7 @@ def lambda_handler(event, context):
         S3_CLIENT.head_object(Bucket=_S3_BUCKET_NAME, Key=object_key);
     except ClientError:
         # kattis login info not in user's CodeBrat account
-        print('kattis login info not found')
+        return make_response(418, 'CodeBrat does not have your login info for Kattis');
         return None
     
     # get user's login-info for kattis
@@ -37,21 +38,19 @@ def lambda_handler(event, context):
     try:
         login_reply = requests.post(_LOGIN_URL, data=login_args, headers=_HEADERS)
     except requests.exceptions.RequestException as err:
-        print('Login connection failed:', err)
+        return make_response(418, 'Failed to login to Kattis: {}'.format(err))
         sys.exit(1)
         
     # verify that login was successful
     if not login_reply.status_code == 200:
         print('Login failed.')
+
         if login_reply.status_code == 403:
-            print('Incorrect username or password/token (403)')
+            return make_response(418, 'Incorrect username or password/token (403)')
         elif login_reply.status_code == 404:
-            print('Incorrect login URL (404)')
+            return make_response(418, 'Incorrect login URL (404)')
         else:
-            print('Status code:', login_reply.status_code)
-        sys.exit(1)
-        
-    print(login_reply.status_code)
+            return make_response(418, 'Submission failed, Kattis server returned the following status_code: {}'.format(login_reply.status_code))
     
     # ============== SUBMISSION ================================================================
     # HARDCODED FOR NOW
@@ -70,10 +69,16 @@ def lambda_handler(event, context):
 
     print(result_reply.status_code)
 
-    return {
-        'statusCode': 200,
-        'body': json.dumps('submitted to kattis!')
-    }
+    # get link to submission on kattis
+    submit_response = result.content.decode('utf-8').replace('<br />', '\n')
+    m = re.search(r'Submission ID: (\d+)', submit_response)
+    if m:
+        submission_id = m.group(1)
+        url = '%s/%s' % (_SUBMISSIONS_URL, submission_id)
+
+        return make_response(200, url)
+    else:
+        return make_response(418, 'Check your Kattis account for submission status.')
 
 def submit(kattis_username, problem_id, cookies, language, files, mainclass='', tag=''):
     """
@@ -108,3 +113,9 @@ def submit(kattis_username, problem_id, cookies, language, files, mainclass='', 
     ))
 
     return requests.post(_SUBMIT_URL, data=data, files=sub_files, cookies=cookies, headers=_HEADERS)
+
+def make_response(status_code, message):
+    return {
+        'statusCode': status_code,
+        'body': json.dumps(message)
+    }
