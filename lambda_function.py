@@ -11,9 +11,9 @@ _HEADERS = {'User-Agent': 'kattis-cli-submit'}
 
 S3_CLIENT = boto3.client ('s3')
 
-def lambda_handler(event, context):
-    username = event['username']
-    problem_id = event['problem_id']
+def lambda_handler(event, context):    
+    username = json.loads(event['body'])['username'];
+    problem_id = json.loads(event['body'])['problem_id'];
     
     # ============== LOGIN ================================================================
     object_key = "{}/kattisrc_json.txt".format(username)
@@ -67,8 +67,13 @@ def lambda_handler(event, context):
                 files,
                 mainclass,
                 tag)
-                
+
     print(result_reply.status_code)
+
+    return {
+        'statusCode': 200,
+        'body': json.dumps('submitted to kattis!')
+    }
 
 def submit(kattis_username, problem_id, cookies, language, files, mainclass='', tag=''):
     """
